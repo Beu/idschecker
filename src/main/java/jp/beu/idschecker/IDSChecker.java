@@ -12,7 +12,6 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -59,6 +58,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
@@ -74,7 +74,7 @@ import javafx.util.Pair;
 
 
 /**
- * IDS Checker
+ * IDS Checker with JavaFX GUI
  */
 public class IDSChecker extends Application {
 
@@ -117,9 +117,30 @@ public class IDSChecker extends Application {
 		System.out.println("stop");
 	}
 
-	private Check1Stage check1Stage = null;
-	private Check2Stage check2Stage = null;
-	private Check3Stage check3Stage = null;
+	private Parent createMainWindow() {
+		BorderPane borderPane = new BorderPane();
+		{
+			MenuBar menuBar = createMenuBar();
+			borderPane.setTop(menuBar);
+		}
+		{
+			Pane mainPane = createMainPane();
+			borderPane.setCenter(mainPane);
+		}
+		return borderPane;
+	}
+
+	private MenuBar createMenuBar() {
+		MenuBar menuBar = new MenuBar();
+		{
+			Menu fileMenu = createFileMenu();
+			Menu checkMenu = createCheckMenu();
+			Menu editMenu = createEditMenu();
+			Menu helpMenu = createHelpMenu();
+			menuBar.getMenus().addAll(fileMenu, checkMenu, editMenu, helpMenu);
+		}
+		return menuBar;
+	}
 
 	private File IDS_DIR = null;
 
@@ -127,196 +148,184 @@ public class IDSChecker extends Application {
 	private MenuItem check2MenuItem = new MenuItem("Check2");
 	private MenuItem check3MenuItem = new MenuItem("Check3");
 
-	private Parent createMainWindow() {
-		BorderPane borderPane = new BorderPane();
+	private Menu createFileMenu() {
+		Menu menu = new Menu("File");
 		{
-			MenuBar menuBar = new MenuBar();
-			{
-				Menu menu = new Menu("File");
-				{
-					MenuItem item = new MenuItem("Select IDS Directory...");
-					item.setOnAction((ActionEvent) -> {
-						DirectoryChooser dirChooser = new DirectoryChooser();
-						dirChooser.setTitle("Select IDS Directory...");
-						IDS_DIR = dirChooser.showDialog(stage);
-						if (IDS_DIR != null) {
-							// check simply
-							File[] files = IDS_DIR.listFiles(new FilenameFilter() {
-								@Override
-								public boolean accept(File dir, String name) {
-									return name.startsWith("IDS-") && name.endsWith(".txt");
-								}
-							});
-							if (files == null || files.length == 0) {
-								// this directory is not for IDS
-								IDS_DIR = null;
-							}
-						}
-						if (IDS_DIR == null) {
-							stage.setTitle("IDSCheck");
-							check1MenuItem.setDisable(true);
-							check2MenuItem.setDisable(true);
-							check3MenuItem.setDisable(true);
-						} else {
-							stage.setTitle("IDSCheck - " + IDS_DIR.getPath());
-							check1MenuItem.setDisable(false);
-							check2MenuItem.setDisable(false);
-							check3MenuItem.setDisable(false);
+			MenuItem item = new MenuItem("Select IDS Directory...");
+			item.setOnAction((ActionEvent) -> {
+				DirectoryChooser dirChooser = new DirectoryChooser();
+				dirChooser.setTitle("Select IDS Directory...");
+				IDS_DIR = dirChooser.showDialog(stage);
+				if (IDS_DIR != null) {
+					// check simply
+					File[] files = IDS_DIR.listFiles(new FilenameFilter() {
+						@Override
+						public boolean accept(File dir, String name) {
+							return name.startsWith("IDS-") && name.endsWith(".txt");
 						}
 					});
-					menu.getItems().add(item);
+					if (files == null || files.length == 0) {
+						// this directory is not for IDS
+						IDS_DIR = null;
+					}
 				}
-				menu.getItems().add(new SeparatorMenuItem());
-				{
-					MenuItem item = new MenuItem("Quit...");
-					item.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.ALT_DOWN));
-					item.setOnAction((ActionEvent event) -> {
-						Alert alert = new Alert(AlertType.CONFIRMATION, "Are you sure?", ButtonType.YES, ButtonType.NO);
-						alert.setTitle("confirm quitting");
-						alert.setHeaderText("You will quit this application.");
-						Optional<ButtonType> result = alert.showAndWait();
-						if (result.isPresent() && result.get() == ButtonType.YES) {
-							if (check1Stage != null && check1Stage.isShowing()) {
-								check1Stage.close();
-							}
-							if (check2Stage != null && check2Stage.isShowing()) {
-								check2Stage.close();
-							}
-							if (check3Stage != null && check3Stage.isShowing()) {
-								check3Stage.close();
-							}
-							Platform.exit();
-						}
-					});
-					menu.getItems().add(item);
-				}
-				menuBar.getMenus().add(menu);
-			}
-			{
-				Menu menu = new Menu("Check");
-				{
-					check1MenuItem.setOnAction((ActionEvent event) -> {
-						try {
-							check1Stage = new Check1Stage(IDS_DIR);
-						} catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-					});
+				if (IDS_DIR == null) {
+					stage.setTitle("IDSCheck");
 					check1MenuItem.setDisable(true);
-					menu.getItems().add(check1MenuItem);
-				}
-				{
-					check2MenuItem.setOnAction((ActionEvent event) -> {
-						try {
-							check2Stage = new Check2Stage(IDS_DIR);
-						} catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-					});
 					check2MenuItem.setDisable(true);
-					menu.getItems().add(check2MenuItem);
-				}
-				{
-					check3MenuItem.setOnAction((ActionEvent event) -> {
-						try {
-							check3Stage = new Check3Stage(IDS_DIR);
-						} catch (IOException e) {
-							throw new RuntimeException(e);
-						}
-					});
 					check3MenuItem.setDisable(true);
-					menu.getItems().add(check3MenuItem);
+				} else {
+					stage.setTitle("IDSCheck - " + IDS_DIR.getPath());
+					check1MenuItem.setDisable(false);
+					check2MenuItem.setDisable(false);
+					check3MenuItem.setDisable(false);
 				}
-				menuBar.getMenus().add(menu);
-			}
-			{
-				Menu menu = new Menu("Edit");
-				{
-					MenuItem item = new MenuItem("Unicode Utilities...");
-					item.setOnAction((ActionEvent event) -> {
-						final Dialog<Void> dialog = new Dialog<>();
-						dialog.setTitle("Unicode Utilities");
-						{
-							DialogPane dialogPane = new DialogPane();
-							{
-								VBox vBox = new VBox();
-								vBox.setSpacing(8.0d);
-								{
-									Label label = new Label("Character to Unicode code-point");
-									vBox.getChildren().add(label);
-								}
-								TextField inputTextField = new TextField();
-								TextField outputTextField = new TextField();
-								{
-									HBox hBox = new HBox();
-									hBox.setSpacing(8.0d);
-									{
-										inputTextField.setStyle("-fx-font-size:150%;");
-										inputTextField.setPromptText("paste a character");
-										hBox.getChildren().add(inputTextField);
-									}
-									{
-										Button button = new Button("Convert");
-										button.setOnAction((ActionEvent event2) -> {
-											outputTextField.setText(
-													inputTextField.getText().codePoints()
-															.mapToObj((int codePoint) -> String.format("U+%04X (%s)", codePoint, BlockInfo.getBlockInfo(codePoint).name))
-															.collect(Collectors.joining(" ")));
-										});
-										hBox.getChildren().add(button);
-									}
-									vBox.getChildren().add(hBox);
-								}
-								{
-									outputTextField.setEditable(false);
-									vBox.getChildren().add(outputTextField);
-								}
-								vBox.getChildren().add(new Separator());
-								dialogPane.setContent(vBox);
-							}
-							dialog.setDialogPane(dialogPane);
-							{
-								ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
-								dialog.getDialogPane().getButtonTypes().add(buttonType);
-							}
-							dialog.initModality(Modality.NONE);
-							dialog.show();
-						}
-					});
-					menu.getItems().add(item);
+			});
+			menu.getItems().add(item);
+		}
+		menu.getItems().add(new SeparatorMenuItem());
+		{
+			MenuItem item = new MenuItem("Quit...");
+			item.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.ALT_DOWN));
+			item.setOnAction((ActionEvent event) -> {
+				Alert alert = new Alert(AlertType.CONFIRMATION, "Are you sure?", ButtonType.YES, ButtonType.NO);
+				alert.setTitle("confirm quitting");
+				alert.setHeaderText("You will quit this application.");
+				alert.showAndWait()
+						.filter((ButtonType buttonType) -> buttonType == ButtonType.YES)
+						.ifPresent((ButtonType buttonType) -> {
+							Platform.exit();
+						});
+			});
+			menu.getItems().add(item);
+		}
+		return menu;
+	}
+
+	private Menu createCheckMenu() {
+		Menu menu = new Menu("Check");
+		{
+			check1MenuItem.setOnAction((ActionEvent event) -> {
+				try {
+					new Check1Stage(IDS_DIR);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
 				}
-				menuBar.getMenus().add(menu);
-			}
-			{
-				Menu menu = new Menu("Help");
-				{
-					MenuItem item = new MenuItem("About...");
-					item.setOnAction((ActionEvent event) -> {
-						Alert alert = new Alert(AlertType.INFORMATION, null, ButtonType.OK);
-						alert.setTitle("About...");
-						alert.setHeaderText("IDSChecker3");
-						alert.showAndWait();
-					});
-					menu.getItems().add(item);
-				}
-				menuBar.getMenus().add(menu);
-			}
-			borderPane.setTop(menuBar);
+			});
+			check1MenuItem.setDisable(true);
+			menu.getItems().add(check1MenuItem);
 		}
 		{
-			TextFlow textFlow = new TextFlow();
-			textFlow.setPadding(new Insets(8.0d));
-			textFlow.setTextAlignment(TextAlignment.LEFT);
-			{
-				Text text = new Text(
-						"(1) Select IDS directory with File menu.\n\n"
-						+ "(2) Select any check item with Check menu.\n");
-				text.setStyle("-fx-font-family:monospace; -fx-font-size:200%;");
-				textFlow.getChildren().add(text);
-			}
-			borderPane.setCenter(textFlow);
+			check2MenuItem.setOnAction((ActionEvent event) -> {
+				try {
+					new Check2Stage(IDS_DIR);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			check2MenuItem.setDisable(true);
+			menu.getItems().add(check2MenuItem);
 		}
-		return borderPane;
+		{
+			check3MenuItem.setOnAction((ActionEvent event) -> {
+				try {
+					new Check3Stage(IDS_DIR);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			check3MenuItem.setDisable(true);
+			menu.getItems().add(check3MenuItem);
+		}
+		return menu;
+	}
+
+	private Menu createEditMenu() {
+		Menu menu = new Menu("Edit");
+		{
+			MenuItem item = new MenuItem("Unicode Utilities...");
+			item.setOnAction((ActionEvent event) -> {
+				final Dialog<Void> dialog = new Dialog<>();
+				dialog.setTitle("Unicode Utilities");
+				{
+					DialogPane dialogPane = new DialogPane();
+					{
+						VBox vBox = new VBox();
+						vBox.setSpacing(8.0d);
+						{
+							Label label = new Label("Character to Unicode code-point");
+							vBox.getChildren().add(label);
+						}
+						TextField inputTextField = new TextField();
+						TextField outputTextField = new TextField();
+						{
+							HBox hBox = new HBox();
+							hBox.setSpacing(8.0d);
+							{
+								inputTextField.setStyle("-fx-font-size:150%;");
+								inputTextField.setPromptText("paste a character");
+								hBox.getChildren().add(inputTextField);
+							}
+							{
+								Button button = new Button("Convert");
+								button.setOnAction((ActionEvent event2) -> {
+									outputTextField.setText(
+											inputTextField.getText().codePoints()
+													.mapToObj((int codePoint) -> String.format("U+%04X (%s)", codePoint, BlockInfo.getBlockInfo(codePoint).name))
+													.collect(Collectors.joining(" ")));
+								});
+								hBox.getChildren().add(button);
+							}
+							vBox.getChildren().add(hBox);
+						}
+						{
+							outputTextField.setEditable(false);
+							vBox.getChildren().add(outputTextField);
+						}
+						vBox.getChildren().add(new Separator());
+						dialogPane.setContent(vBox);
+					}
+					dialog.setDialogPane(dialogPane);
+					{
+						ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
+						dialog.getDialogPane().getButtonTypes().add(buttonType);
+					}
+					dialog.initModality(Modality.NONE);
+					dialog.show();
+				}
+			});
+			menu.getItems().add(item);
+		}
+		return menu;
+	}
+
+	private Menu createHelpMenu() {
+		Menu menu = new Menu("Help");
+		{
+			MenuItem item = new MenuItem("About...");
+			item.setOnAction((ActionEvent event) -> {
+				Alert alert = new Alert(AlertType.INFORMATION, null, ButtonType.OK);
+				alert.setTitle("About...");
+				alert.setHeaderText("IDSChecker3");
+				alert.showAndWait();
+			});
+			menu.getItems().add(item);
+		}
+		return menu;
+	}
+
+	private Pane createMainPane() {
+		TextFlow textFlow = new TextFlow();
+		textFlow.setPadding(new Insets(8.0d));
+		textFlow.setTextAlignment(TextAlignment.LEFT);
+		{
+			Text text = new Text(
+					"(1) Select IDS directory with File menu.\n\n"
+					+ "(2) Select any check item with Check menu.\n");
+			text.setStyle("-fx-font-family:monospace; -fx-font-size:200%;");
+			textFlow.getChildren().add(text);
+		}
+		return textFlow;
 	}
 }
 
@@ -340,186 +349,201 @@ abstract class CheckBaseStage extends Stage {
 //		this.show();  // WebView が 一旦 HTML を 讀み取りて後
 	}
 
-	protected WebView webView;
-	protected WebEngine webEngine;
-	protected ToggleGroup fontToggleGroup;
-
 	private Parent createMainWindow() throws IOException {
 		BorderPane borderPane = new BorderPane();
 		{
-			MenuBar menuBar = new MenuBar();
-			{
-				Menu menu = new Menu("File");
-				{
-					MenuItem item = new MenuItem("Save As HTML...");
-					item.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.ALT_DOWN));
-					item.setOnAction((ActionEvent event) -> {
-						Document document = webEngine.getDocument();
-						FileChooser chooser = new FileChooser();
-						File file = chooser.showSaveDialog(null);
-						if (file != null) {
-							try (FileOutputStream fos = new FileOutputStream(file)) {
-								serializeDocument(document, fos);
-							} catch (IllegalAccessException | InstantiationException | ClassNotFoundException | IOException | TransformerException e) {
-								e.printStackTrace();
-							}
-						}
-					});
-					menu.getItems().add(item);
-				}
-				{
-					MenuItem item = new MenuItem("Quit...");
-					item.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.ALT_DOWN));
-					item.setOnAction((ActionEvent event) -> {
-						Alert alert = new Alert(AlertType.CONFIRMATION, "Are you sure?", ButtonType.YES, ButtonType.NO);
-						alert.setTitle("Confirm Quitting");
-						alert.showAndWait()
-								.filter((ButtonType buttonType) -> buttonType == ButtonType.YES)
-								.ifPresent((ButtonType buttonType) -> {
-									CheckBaseStage.this.close();
-								});
-					});
-					menu.getItems().add(item);
-				}
-				menuBar.getMenus().add(menu);
-			}
-			{
-				Menu menu = new Menu("View");
-				{
-					MenuItem item = new MenuItem("Zoom In");
-					item.setOnAction((ActionEvent) -> {
-						Platform.runLater(() -> {
-							webEngine.executeScript("zoomIn();");
-						});
-					});
-					menu.getItems().add(item);
-				}
-				{
-					MenuItem item = new MenuItem("Zoom Reset");
-					item.setOnAction((ActionEvent event) -> {
-						Platform.runLater(() -> {
-							webEngine.executeScript("zoomReset();");
-						});
-					});
-					menu.getItems().add(item);
-				}
-				{
-					MenuItem item = new MenuItem("Zoom Out");
-					item.setOnAction((ActionEvent event) -> {
-						Platform.runLater(() -> {
-							webEngine.executeScript("zoomOut();");
-						});
-					});
-					menu.getItems().add(item);
-				}
-				{
-					Menu fontMenu = new Menu("Select Font...");
-					fontToggleGroup = new ToggleGroup();
-					fontToggleGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-						@Override
-						public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
-							CheckBaseStage.this.check();
-						}
-					});
-					{
-						RadioMenuItem tcItem = new RadioMenuItem("繁");
-						tcItem.setUserData("Noto Serif CJK TC");
-						tcItem.setToggleGroup(fontToggleGroup);
-						RadioMenuItem scItem = new RadioMenuItem("简");
-						scItem.setUserData("Noto Serif CJK SC");
-						scItem.setToggleGroup(fontToggleGroup);
-						RadioMenuItem jpItem = new RadioMenuItem("日");
-						jpItem.setUserData("Noto Serif CJK JP");
-						jpItem.setToggleGroup(fontToggleGroup);
-						RadioMenuItem krItem = new RadioMenuItem("韓");
-						krItem.setUserData("Noto Serif CJK KR");
-						krItem.setToggleGroup(fontToggleGroup);
-						fontMenu.getItems().addAll(tcItem, scItem, jpItem, krItem);
-						// set default
-						jpItem.setSelected(true);
-					}
-					menu.getItems().add(fontMenu);
-				}
-				menuBar.getMenus().add(menu);
-			}
-			{
-				Menu menu = new Menu("Edit");
-				{
-					MenuItem item = new MenuItem("Find...");
-					item.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.ALT_DOWN));
-					item.setOnAction((ActionEvent event) -> {
-						Dialog<Void> dialog = new Dialog<>();
-						dialog.setTitle("Find...");
-						{
-							DialogPane dialogPane = new DialogPane();
-							{
-								VBox vBox = new VBox();
-								vBox.setSpacing(8.0d);
-								{
-									HBox hBox = new HBox();
-									hBox.setSpacing(8.0d);
-									final TextField inputTextField = new TextField();
-									{
-										hBox.getChildren().add(inputTextField);
-									}
-									{
-										Button button = new Button("Find");
-										button.setOnAction((ActionEvent) -> {
-											Platform.runLater(() -> {
-												findText(inputTextField.getText());
-											});
-										});
-										hBox.getChildren().add(button);
-									}
-									vBox.getChildren().add(hBox);
-								}
-								dialogPane.setContent(vBox);
-							}
-							{
-								ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
-								dialogPane.getButtonTypes().add(buttonType);
-							}
-							dialog.setDialogPane(dialogPane);
-						}
-						dialog.initModality(Modality.WINDOW_MODAL);
-						dialog.show();
-					});
-					menu.getItems().add(item);
-				}
-				menuBar.getMenus().add(menu);
-			}
+			MenuBar menuBar = createMenuBar();
 			borderPane.setTop(menuBar);
 		}
 		{
-			webView = new WebView();
-			webEngine = webView.getEngine();
-/*			webEngine.setOnAlert((WebEvent<String> event) -> {
-				System.out.println("loaded");
-				CheckBaseStage.this.show();
-				Platform.runLater(() -> {
-					CheckBaseStage.this.check();
-				});
-			});
-*/			webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
-				public void changed(ObservableValue ov, State oldState, State newState) {
-					if (newState == State.SUCCEEDED) {
-						System.out.println("loaded");
-						CheckBaseStage.this.show();
-						Platform.runLater(() -> {
-							CheckBaseStage.this.check();
-						});
+			Parent mainPane = createMainPane();
+			borderPane.setCenter(mainPane);
+		}
+		return borderPane;
+	}
+
+	private MenuBar createMenuBar() {
+		MenuBar menuBar = new MenuBar();
+		{
+			Menu fileMenu = createFileMenu();
+			Menu viewMenu = createViewMenu();
+			Menu editMenu = createEditMenu();
+			menuBar.getMenus().addAll(fileMenu, viewMenu, editMenu);
+		}
+		return menuBar;
+	}
+
+	protected WebView webView;
+	protected WebEngine webEngine;
+
+	private Menu createFileMenu() {
+		Menu menu = new Menu("File");
+		{
+			MenuItem item = new MenuItem("Save As HTML...");
+			item.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.ALT_DOWN));
+			item.setOnAction((ActionEvent event) -> {
+				Document document = webEngine.getDocument();
+				FileChooser chooser = new FileChooser();
+				File file = chooser.showSaveDialog(null);
+				if (file != null) {
+					try (FileOutputStream fos = new FileOutputStream(file)) {
+						serializeDocument(document, fos);
+					} catch (IllegalAccessException | InstantiationException | ClassNotFoundException | IOException | TransformerException e) {
+						e.printStackTrace();
 					}
 				}
 			});
-			try (InputStream is = IDSChecker.class.getClassLoader().getResourceAsStream("initial.xhtml");
-					InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
-					BufferedReader br = new BufferedReader(isr)) {
-				String content = br.lines().collect(Collectors.joining("\n"));
-				webEngine.loadContent(content, "application/xhtml+xml");
-			}
-			borderPane.setCenter(webView);
+			menu.getItems().add(item);
 		}
-		return borderPane;
+		{
+			MenuItem item = new MenuItem("Quit...");
+			item.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.ALT_DOWN));
+			item.setOnAction((ActionEvent event) -> {
+				Alert alert = new Alert(AlertType.CONFIRMATION, "Are you sure?", ButtonType.YES, ButtonType.NO);
+				alert.setTitle("Confirm Quitting");
+				alert.showAndWait()
+						.filter((ButtonType buttonType) -> buttonType == ButtonType.YES)
+						.ifPresent((ButtonType buttonType) -> {
+							CheckBaseStage.this.close();
+						});
+			});
+			menu.getItems().add(item);
+		}
+		return menu;
+	}
+
+	private ToggleGroup fontToggleGroup = new ToggleGroup();
+
+	private Menu createViewMenu() {
+		Menu menu = new Menu("View");
+		{
+			MenuItem item = new MenuItem("Zoom In");
+			item.setOnAction((ActionEvent) -> {
+				Platform.runLater(() -> {
+					webEngine.executeScript("zoomIn();");
+				});
+			});
+			menu.getItems().add(item);
+		}
+		{
+			MenuItem item = new MenuItem("Zoom Reset");
+			item.setOnAction((ActionEvent event) -> {
+				Platform.runLater(() -> {
+					webEngine.executeScript("zoomReset();");
+				});
+			});
+			menu.getItems().add(item);
+		}
+		{
+			MenuItem item = new MenuItem("Zoom Out");
+			item.setOnAction((ActionEvent event) -> {
+				Platform.runLater(() -> {
+					webEngine.executeScript("zoomOut();");
+				});
+			});
+			menu.getItems().add(item);
+		}
+		{
+			Menu fontMenu = new Menu("Select Font...");
+			fontToggleGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+				@Override
+				public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
+					CheckBaseStage.this.check();
+				}
+			});
+			{
+				RadioMenuItem tcItem = new RadioMenuItem("繁");
+				tcItem.setUserData("Noto Serif CJK TC");
+				tcItem.setToggleGroup(fontToggleGroup);
+				RadioMenuItem scItem = new RadioMenuItem("简");
+				scItem.setUserData("Noto Serif CJK SC");
+				scItem.setToggleGroup(fontToggleGroup);
+				RadioMenuItem jpItem = new RadioMenuItem("日");
+				jpItem.setUserData("Noto Serif CJK JP");
+				jpItem.setToggleGroup(fontToggleGroup);
+				RadioMenuItem krItem = new RadioMenuItem("韓");
+				krItem.setUserData("Noto Serif CJK KR");
+				krItem.setToggleGroup(fontToggleGroup);
+				fontMenu.getItems().addAll(tcItem, scItem, jpItem, krItem);
+				// set default
+				jpItem.setSelected(true);
+			}
+			menu.getItems().add(fontMenu);
+		}
+		return menu;
+	}
+
+	private Menu createEditMenu() {
+		Menu menu = new Menu("Edit");
+		{
+			MenuItem item = new MenuItem("Find...");
+			item.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.ALT_DOWN));
+			item.setOnAction((ActionEvent event) -> {
+				Dialog<Void> dialog = new Dialog<>();
+				dialog.setTitle("Find...");
+				{
+					DialogPane dialogPane = new DialogPane();
+					{
+						VBox vBox = new VBox();
+						vBox.setSpacing(8.0d);
+						{
+							HBox hBox = new HBox();
+							hBox.setSpacing(8.0d);
+							final TextField inputTextField = new TextField();
+							{
+								hBox.getChildren().add(inputTextField);
+							}
+							{
+								Button button = new Button("Find");
+								button.setOnAction((ActionEvent) -> {
+									Platform.runLater(() -> {
+										findText(inputTextField.getText());
+									});
+								});
+								hBox.getChildren().add(button);
+							}
+							vBox.getChildren().add(hBox);
+						}
+						dialogPane.setContent(vBox);
+					}
+					{
+						ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
+						dialogPane.getButtonTypes().add(buttonType);
+					}
+					dialog.setDialogPane(dialogPane);
+				}
+				dialog.initModality(Modality.WINDOW_MODAL);
+				dialog.show();
+			});
+			menu.getItems().add(item);
+		}
+		return menu;
+	}
+
+	private Parent createMainPane() {
+		webView = new WebView();
+		webEngine = webView.getEngine();
+		webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
+			@Override
+			public void changed(ObservableValue ov, State oldState, State newState) {
+				if (newState == State.SUCCEEDED) {
+					System.out.println("loaded");
+					CheckBaseStage.this.show();
+					Platform.runLater(() -> {
+						CheckBaseStage.this.check();
+					});
+				}
+			}
+		});
+		try (InputStream is = IDSChecker.class.getClassLoader().getResourceAsStream("initial.xhtml");
+				InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8);
+				BufferedReader br = new BufferedReader(isr)) {
+			String content = br.lines().collect(Collectors.joining("\n"));
+			webEngine.loadContent(content, "application/xhtml+xml");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		return webView;
 	}
 
 	public abstract void check();
