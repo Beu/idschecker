@@ -10,8 +10,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -43,6 +45,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
@@ -71,6 +74,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Pair;
+import jp.beu.idschecker.IDBase.ParseException;
 
 
 /**
@@ -147,6 +151,7 @@ public class IDSChecker extends Application {
 	private MenuItem check1MenuItem = new MenuItem("Check1");
 	private MenuItem check2MenuItem = new MenuItem("Check2");
 	private MenuItem check3MenuItem = new MenuItem("Check3");
+	private MenuItem check4MenuItem = new MenuItem("Check4");
 
 	private Menu createFileMenu() {
 		Menu menu = new Menu("File");
@@ -174,11 +179,13 @@ public class IDSChecker extends Application {
 					check1MenuItem.setDisable(true);
 					check2MenuItem.setDisable(true);
 					check3MenuItem.setDisable(true);
+					check4MenuItem.setDisable(true);
 				} else {
 					stage.setTitle("IDSCheck - " + IDS_DIR.getPath());
 					check1MenuItem.setDisable(false);
 					check2MenuItem.setDisable(false);
 					check3MenuItem.setDisable(false);
+					check4MenuItem.setDisable(false);
 				}
 			});
 			menu.getItems().add(item);
@@ -237,6 +244,17 @@ public class IDSChecker extends Application {
 			check3MenuItem.setDisable(true);
 			menu.getItems().add(check3MenuItem);
 		}
+		{
+			check4MenuItem.setOnAction((ActionEvent event) -> {
+				try {
+					new Check4Stage(IDS_DIR);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			check4MenuItem.setDisable(true);
+			menu.getItems().add(check4MenuItem);
+		}
 		return menu;
 	}
 
@@ -262,7 +280,7 @@ public class IDSChecker extends Application {
 							HBox hBox = new HBox();
 							hBox.setSpacing(8.0d);
 							{
-								inputTextField.setStyle("-fx-font-size:150%;");
+								inputTextField.setStyle("-fx-font-size:200%; font-family:'Noto Serif CJK JP',HanaMinA,HanaMinB;");
 								inputTextField.setPromptText("paste a character");
 								hBox.getChildren().add(inputTextField);
 							}
@@ -287,7 +305,7 @@ public class IDSChecker extends Application {
 					}
 					dialog.setDialogPane(dialogPane);
 					{
-						ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
+						ButtonType buttonType = new ButtonType("Close", ButtonData.CANCEL_CLOSE);
 						dialog.getDialogPane().getButtonTypes().add(buttonType);
 					}
 					dialog.initModality(Modality.NONE);
@@ -490,11 +508,13 @@ abstract class CheckBaseStage extends Stage {
 							HBox hBox = new HBox();
 							hBox.setSpacing(8.0d);
 							final TextField inputTextField = new TextField();
+							inputTextField.setStyle(String.format("-fx-font-size:150%%; -fx-font-family:'%s',HanaMinA,HanaMinB;", fontToggleGroup.getSelectedToggle().getUserData()));
 							{
 								hBox.getChildren().add(inputTextField);
 							}
 							{
 								Button button = new Button("Find");
+								button.setDefaultButton(true);
 								button.setOnAction((ActionEvent) -> {
 									Platform.runLater(() -> {
 										findText(inputTextField.getText());
@@ -507,7 +527,7 @@ abstract class CheckBaseStage extends Stage {
 						dialogPane.setContent(vBox);
 					}
 					{
-						ButtonType buttonType = new ButtonType("OK", ButtonData.OK_DONE);
+						ButtonType buttonType = new ButtonType("Close", ButtonData.CANCEL_CLOSE);
 						dialogPane.getButtonTypes().add(buttonType);
 					}
 					dialog.setDialogPane(dialogPane);
@@ -607,7 +627,6 @@ abstract class CheckBaseStage extends Stage {
 					case "CJK Radicals Supplement":
 					case "Kangxi Radicals":
 					case "Ideographic Description Characters":
-					case "CJK Symbols and Punctuation":
 					case "CJK Strokes":
 					case "CJK Compatibility":
 					case "CJK Unified Ideographs Extension A":
@@ -965,10 +984,229 @@ class Check3Stage extends CheckBaseStage {
 }
 
 ////////////////////////////////
+//Check4
+////////////////////////////////
+
+class Check4Stage extends CheckBaseStage {
+
+	public Check4Stage(File IDS_DIR) throws IOException {
+		super(IDS_DIR);
+		this.setTitle("Check4");
+	}
+
+	@Override
+	public void check() {
+		Platform.runLater(() -> {
+			super.printStyledLine("Check4", "font-size:200%;");
+			super.printLine("target: IDS-UCS-*.txt (without *Compat*)");
+			super.printLine("pattern: ^<IDENTIFIER>\\\\t<CHARACTER>(?:\\\\t<DESCRIPTION>)*$");
+			super.printStyledLine("<HT>:\u21d2, <SPC>:\u21d4", "color:red;");
+			super.printLine("================");
+			super.scrollToBottom();
+		});
+		File[] files = IDS_DIR.listFiles(new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				return name.startsWith("IDS-UCS") && name.endsWith(".txt") && name.indexOf("Compat") < 0;
+			}
+		});
+		for (File file : files) {
+			Platform.runLater(() -> {
+				super.printStyledLine(file.getName(), "font-size:120%; font-weight:bold;");
+				super.scrollToBottom();
+			});
+System.out.println(file.getName());
+			Pattern pattern = Pattern.compile("^U[-+]([0-9A-F]+)\\t(\\S+)(?:\\t(\\S+))*$");
+			try (FileInputStream fis = new FileInputStream(file);
+					InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8);
+					BufferedReader br = new BufferedReader(isr)) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					line = line.trim();
+					if (line.startsWith(";;") || line.startsWith("<;;") || line.isEmpty()) {
+						continue;
+					}
+					Matcher matcher = pattern.matcher(line);
+					if (!matcher.matches()) {
+						final String fLine = line;
+						Platform.runLater(() -> {
+							super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
+							super.printStyledLine("unmatched with the pattern", "color:red;");
+							super.scrollToBottom();
+						});
+						continue;
+					}
+					////////////////
+					// identifier
+					////////////////
+					int idCodePoint = Integer.parseInt(matcher.group(1), 16);
+System.out.println(String.format("U+%04X", idCodePoint));
+					////////////////
+					// character
+					////////////////
+					String character = matcher.group(2);
+					try {
+						Pair<IDBase, String> pair = IDBase.parse(character);
+						if (!(pair.getKey() instanceof IDBase.NormalCharacter)) {
+							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							Platform.runLater(() -> {
+								super.printAutoStyledLine(fLine);
+								super.printStyledLine("character part is not a character", "color:red;");
+								super.scrollToBottom();
+							});
+						}
+						if (!pair.getValue().isEmpty()) {
+							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							Platform.runLater(() -> {
+								super.printAutoStyledLine(fLine);
+								super.printStyledLine("character part has unnecessary characters", "color:red;");
+								super.scrollToBottom();
+							});
+						}
+					} catch (IDBase.ParseException e) {
+						final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+						Platform.runLater(() -> {
+							super.printAutoStyledLine(fLine);
+							super.printStyledLine(e.getMessage(), "color:red;");
+							super.scrollToBottom();
+						});
+					}
+					////////////////
+					// descriptions
+					////////////////
+					for (int i = 3, iMax = matcher.groupCount();  i <= iMax;  ++i) {
+						String description = matcher.group(i);
+						if (description == null || description.isEmpty()) {
+							continue;
+						}
+System.out.println("desc: " + description);
+						try {
+							Pair<IDBase, String> pair = IDBase.parse(description);
+							String rest = pair.getValue();
+							if (rest != null && !rest.isEmpty()) {
+								final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+								Platform.runLater(() -> {
+									super.printAutoStyledLine(fLine);
+									super.printStyledLine("unnecessary character: " + rest, "color:red;");
+									super.scrollToBottom();
+								});
+								continue;
+							}
+							checkDescription(line, pair.getKey(), /*depth:*/0);
+						} catch (IDBase.ParseException e) {
+							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							Platform.runLater(() -> {
+								super.printAutoStyledLine(fLine);
+								super.printStyledLine(e.getMessage(), "color:red;");
+								super.scrollToBottom();
+							});
+						}
+					}
+				}
+			} catch (IOException e) {
+				Platform.runLater(() -> {
+					super.printStyledLine(e.getMessage(), "color:red;");
+					super.scrollToBottom();
+				});
+			}
+		}
+		Platform.runLater(() -> {
+			super.printLine("================");
+			super.printLine("done.");
+			super.scrollToBottom();
+		});
+	}
+
+	private void checkDescription(String line, IDBase idBase, int depth) {
+		if (idBase instanceof IDBase.NormalCharacter) {
+			int codePoint = ((IDBase.NormalCharacter) idBase).codePoint;
+			switch (BlockInfo.getBlockInfo(codePoint).name) {
+			case "CJK Radicals Supplement":
+			case "Kangxi Radicals":
+			//case "Ideographic Description Characters":
+			case "CJK Strokes":
+			//case "CJK Compatibility":
+			case "CJK Unified Ideographs Extension A":
+			case "CJK Unified Ideographs":
+			//case "CJK Compatibility Ideographs":
+			case "CJK Unified Ideographs Extension B":
+			case "CJK Unified Ideographs Extension C":
+			case "CJK Unified Ideographs Extension D":
+			case "CJK Unified Ideographs Extension E":
+			case "CJK Unified Ideographs Extension F":
+			//case "CJK Compatibility Ideohgraphs Supplement":
+				return;
+			}
+			Platform.runLater(() -> {
+				super.printAutoStyledLine(line);
+				super.printStyledLine(String.format("undesirable character '%c' (U+%04X) (%s)", codePoint, codePoint, BlockInfo.getBlockInfo(codePoint).name), "color:red;");
+				super.scrollToBottom();
+			});
+			return;
+		} else if (idBase instanceof IDBase.IDCharacter) {
+//			int idcCodePoint = ((IDBase.IDCharacter) idBase).idcCodePoint;
+			List<IDBase> parameterList = ((IDBase.IDCharacter) idBase).parameterList;
+			for (IDBase parameter : parameterList) {
+				checkDescription(line, parameter, depth + 1);
+			}
+		} else if (idBase instanceof IDBase.EntityCharacter) {
+			String entityName = ((IDBase.EntityCharacter) idBase).entityName;
+			File[] files = IDS_DIR.listFiles(new FilenameFilter() {
+				@Override
+				public boolean accept(File dir, String name) {
+					return name.startsWith("IDS-") && name.endsWith(".txt");
+				}
+			});
+			Pattern pattern = Pattern.compile("^(\\S+)\\s+(\\S+)(?:\\s+(\\S+))*$");
+			boolean found = false;
+			for (File file : files) {
+				try {
+					Optional<Pair<String, Matcher>> result = Files.lines(file.toPath())
+							.map((String line2) -> line2.trim())
+							.filter((String line2) -> !line2.startsWith(";;") && !line2.startsWith("<;;"))
+							.map((String line2) -> new Pair<String, Matcher>(line2, pattern.matcher(line2)))
+							.filter((Pair<String, Matcher> pair2) -> pair2.getValue().matches())
+							.filter((Pair<String, Matcher> pair2) -> {
+								if (pair2.getValue().group(1).equals(entityName)) {
+									Platform.runLater(() -> {
+										super.printStyledLine(entityName + " found in " + file.getName(), "color:blue");
+										super.printAutoStyledLine(pair2.getKey(), "color:blue;");
+										super.scrollToBottom();
+									});
+									return true;
+								} else {
+									return false;
+								}
+							})
+							.findFirst();
+					if (result.isPresent()) {
+						found = true;
+						break;
+					} else {
+						continue;
+					}
+				} catch (IOException e) {
+					// TODO
+				}
+			}
+			if (!found) {
+				Platform.runLater(() -> {
+					super.printAutoStyledLine(line);
+					super.printStyledLine(entityName + " is not found", "color:red");
+					super.scrollToBottom();
+				});
+			}
+		}
+	}
+}
+
+////////////////////////////////
 // description with "Ideographic Description Characters"
 ////////////////////////////////
 
 abstract class IDBase {
+
+	public abstract String toString();
 
 	public static Pair<IDBase, String> parse(String s) throws ParseException {
 		if (s == null || s.isEmpty()) {
@@ -981,7 +1219,7 @@ abstract class IDBase {
 				throw new ParseException("expected ';'");
 			}
 			EntityCharacter object = new EntityCharacter();
-			object.entityName = s.substring(1, s.length() - 1);
+			object.entityName = s.substring(1, index);
 			String rest = s.substring(index + 1);
 			return new Pair<>(object, rest);
 		}
@@ -1031,13 +1269,31 @@ abstract class IDBase {
 		public static String idc3s = "⿲⿳";
 		protected int idcCodePoint;
 		protected List<IDBase> parameterList = new LinkedList<>();
+
+		@Override
+		public String toString() {
+			return new String(new int[] {idcCodePoint}, 0, 1)
+					+ parameterList.stream()
+					.map((IDBase idBase) -> idBase.toString())
+					.collect(Collectors.joining());
+		}
 	}
 
 	public static class NormalCharacter extends IDBase {
 		protected int codePoint;
+
+		@Override
+		public String toString() {
+			return new String(new int[] {codePoint}, 0, 1);
+		}
 	}
 
 	public static class EntityCharacter extends IDBase {
 		protected String entityName;
+
+		@Override
+		public String toString() {
+			return "&" + entityName + ";";
+		}
 	}
 }
