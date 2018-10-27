@@ -45,7 +45,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
@@ -74,7 +73,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Pair;
-import jp.beu.idschecker.IDBase.ParseException;
 
 
 /**
@@ -549,9 +547,12 @@ abstract class CheckBaseStage extends Stage {
 				if (newState == State.SUCCEEDED) {
 					System.out.println("loaded");
 					CheckBaseStage.this.show();
-					Platform.runLater(() -> {
+//					Platform.runLater(() -> {
+//						CheckBaseStage.this.check();
+//					});
+					new Thread(() -> {
 						CheckBaseStage.this.check();
-					});
+					}).start();
 				}
 			}
 		});
@@ -925,17 +926,17 @@ class Check3Stage extends CheckBaseStage {
 							});
 						}
 						if (!pair.getValue().isEmpty()) {
-							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							final String fLine = line;
 							Platform.runLater(() -> {
-								super.printAutoStyledLine(fLine);
+								super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 								super.printStyledLine("character part has unnecessary characters", "color:red;");
 								super.scrollToBottom();
 							});
 						}
 					} catch (IDBase.ParseException e) {
-						final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+						final String fLine = line;
 						Platform.runLater(() -> {
-							super.printAutoStyledLine(fLine);
+							super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 							super.printStyledLine(e.getMessage(), "color:red;");
 							super.scrollToBottom();
 						});
@@ -950,18 +951,18 @@ class Check3Stage extends CheckBaseStage {
 							Pair<IDBase, String> pair = IDBase.parse(description);
 							// 偶に [X] や [J] が 附くことが ある
 							if (!pair.getValue().isEmpty() && !pair.getValue().matches("\\[[A-Z]\\]")) {
-								final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+								final String fLine = line;
 								final String unnecessary = pair.getValue();
 								Platform.runLater(() -> {
-									super.printAutoStyledLine(fLine);
+									super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 									super.printAutoStyledLine("description part has unnecessary characters: " + unnecessary, "color:red;");
 									super.scrollToBottom();
 								});
 							}
 						} catch (IDBase.ParseException e) {
-							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							final String fLine = line;
 							Platform.runLater(() -> {
-								super.printAutoStyledLine(fLine);
+								super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 								super.printStyledLine(e.getMessage(), "color:red;");
 								super.scrollToBottom();
 							});
@@ -1015,7 +1016,6 @@ class Check4Stage extends CheckBaseStage {
 				super.printStyledLine(file.getName(), "font-size:120%; font-weight:bold;");
 				super.scrollToBottom();
 			});
-System.out.println(file.getName());
 			Pattern pattern = Pattern.compile("^U[-+]([0-9A-F]+)\\t(\\S+)(?:\\t(\\S+))*$");
 			try (FileInputStream fis = new FileInputStream(file);
 					InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8);
@@ -1048,25 +1048,25 @@ System.out.println(String.format("U+%04X", idCodePoint));
 					try {
 						Pair<IDBase, String> pair = IDBase.parse(character);
 						if (!(pair.getKey() instanceof IDBase.NormalCharacter)) {
-							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							final String fLine = line;
 							Platform.runLater(() -> {
-								super.printAutoStyledLine(fLine);
+								super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 								super.printStyledLine("character part is not a character", "color:red;");
 								super.scrollToBottom();
 							});
 						}
 						if (!pair.getValue().isEmpty()) {
-							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							final String fLine = line;
 							Platform.runLater(() -> {
-								super.printAutoStyledLine(fLine);
+								super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 								super.printStyledLine("character part has unnecessary characters", "color:red;");
 								super.scrollToBottom();
 							});
 						}
 					} catch (IDBase.ParseException e) {
-						final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+						final String fLine = line;
 						Platform.runLater(() -> {
-							super.printAutoStyledLine(fLine);
+							super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 							super.printStyledLine(e.getMessage(), "color:red;");
 							super.scrollToBottom();
 						});
@@ -1079,14 +1079,13 @@ System.out.println(String.format("U+%04X", idCodePoint));
 						if (description == null || description.isEmpty()) {
 							continue;
 						}
-System.out.println("desc: " + description);
 						try {
 							Pair<IDBase, String> pair = IDBase.parse(description);
 							String rest = pair.getValue();
 							if (rest != null && !rest.isEmpty()) {
-								final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+								final String fLine = line;
 								Platform.runLater(() -> {
-									super.printAutoStyledLine(fLine);
+									super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 									super.printStyledLine("unnecessary character: " + rest, "color:red;");
 									super.scrollToBottom();
 								});
@@ -1094,9 +1093,9 @@ System.out.println("desc: " + description);
 							}
 							checkDescription(line, pair.getKey(), /*depth:*/0);
 						} catch (IDBase.ParseException e) {
-							final String fLine = line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4");
+							final String fLine = line;
 							Platform.runLater(() -> {
-								super.printAutoStyledLine(fLine);
+								super.printAutoStyledLine(fLine.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 								super.printStyledLine(e.getMessage(), "color:red;");
 								super.scrollToBottom();
 							});
@@ -1138,7 +1137,7 @@ System.out.println("desc: " + description);
 				return;
 			}
 			Platform.runLater(() -> {
-				super.printAutoStyledLine(line);
+				super.printAutoStyledLine(line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 				super.printStyledLine(String.format("undesirable character '%c' (U+%04X) (%s)", codePoint, codePoint, BlockInfo.getBlockInfo(codePoint).name), "color:red;");
 				super.scrollToBottom();
 			});
@@ -1170,7 +1169,7 @@ System.out.println("desc: " + description);
 								if (pair2.getValue().group(1).equals(entityName)) {
 									Platform.runLater(() -> {
 										super.printStyledLine(entityName + " found in " + file.getName(), "color:blue");
-										super.printAutoStyledLine(pair2.getKey(), "color:blue;");
+										super.printAutoStyledLine(pair2.getKey().replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"), "color:blue;");
 										super.scrollToBottom();
 									});
 									return true;
@@ -1191,7 +1190,7 @@ System.out.println("desc: " + description);
 			}
 			if (!found) {
 				Platform.runLater(() -> {
-					super.printAutoStyledLine(line);
+					super.printAutoStyledLine(line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 					super.printStyledLine(entityName + " is not found", "color:red");
 					super.scrollToBottom();
 				});
