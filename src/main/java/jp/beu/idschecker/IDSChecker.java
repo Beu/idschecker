@@ -11,8 +11,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -597,13 +599,15 @@ abstract class CheckBaseStage extends Stage {
 	}
 
 	protected void printStyledTexts(String[] texts, String[] styles) {
-		String textArray = "[" + Stream.of(texts)
-				.map((String text) -> "\"" + text.replaceAll("\"", "\\\"") + "\"")
-				.collect(Collectors.joining(","))
+		String textArray = "["
+				+ Stream.of(texts)
+						.map((String text) -> "\"" + text.replaceAll("\"", "\\\"") + "\"")
+						.collect(Collectors.joining(","))
 				+ "]";
-		String styleArray = "[" + Stream.of(styles)
-				.map((String style) -> "\"" + style.replaceAll("\"", "\\\"") + "\"")
-				.collect(Collectors.joining(","))
+		String styleArray = "["
+				+ Stream.of(styles)
+						.map((String style) -> "\"" + style.replaceAll("\"", "\\\"") + "\"")
+						.collect(Collectors.joining(","))
 				+ "]";
 		String script = String.format("printStyledTexts(%s, %s);", textArray, styleArray);
 		webEngine.executeScript(script);
@@ -995,6 +999,8 @@ class Check4Stage extends CheckBaseStage {
 		this.setTitle("Check4");
 	}
 
+	private Map<String, Pair<String, String>> entityDictionary = new HashMap<>();
+
 	@Override
 	public void check() {
 		Platform.runLater(() -> {
@@ -1150,6 +1156,14 @@ System.out.println(String.format("U+%04X", idCodePoint));
 			}
 		} else if (idBase instanceof IDBase.EntityCharacter) {
 			String entityName = ((IDBase.EntityCharacter) idBase).entityName;
+			if (entityDictionary.containsKey(entityName)) {
+				if (entityDictionary.get(entityName).getKey() != null) {
+					// TODO
+				} else {
+					// TODO
+				}
+				return;
+			}
 			File[] files = IDS_DIR.listFiles(new FilenameFilter() {
 				@Override
 				public boolean accept(File dir, String name) {
@@ -1168,10 +1182,12 @@ System.out.println(String.format("U+%04X", idCodePoint));
 							.filter((Pair<String, Matcher> pair2) -> {
 								if (pair2.getValue().group(1).equals(entityName)) {
 									Platform.runLater(() -> {
+										super.printAutoStyledLine(line.replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"));
 										super.printStyledLine(entityName + " found in " + file.getName(), "color:blue");
 										super.printAutoStyledLine(pair2.getKey().replaceAll("\\t", "\u21d2").replaceAll(" ", "\u21d4"), "color:blue;");
 										super.scrollToBottom();
 									});
+									entityDictionary.put(entityName, new Pair<String, String>(pair2.getKey(), null));
 									return true;
 								} else {
 									return false;
@@ -1194,6 +1210,7 @@ System.out.println(String.format("U+%04X", idCodePoint));
 					super.printStyledLine(entityName + " is not found", "color:red");
 					super.scrollToBottom();
 				});
+				entityDictionary.put(entityName, new Pair<>(null, null));
 			}
 		}
 	}
@@ -1266,6 +1283,7 @@ abstract class IDBase {
 		public static String idcs = "⿰⿱⿲⿳⿴⿵⿶⿷⿸⿹⿺⿻";
 		public static String idc2s = "⿰⿱⿴⿵⿶⿷⿸⿹⿺⿻";
 		public static String idc3s = "⿲⿳";
+
 		protected int idcCodePoint;
 		protected List<IDBase> parameterList = new LinkedList<>();
 
